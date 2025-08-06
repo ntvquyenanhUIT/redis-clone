@@ -27,5 +27,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	conn.Write([]byte("+PONG\r\n"))
+	_, err = conn.Write([]byte("+PONG\r\n"))
+	if err != nil {
+		fmt.Println("Error responding to PING")
+		os.Exit(1)
+	}
+
 }

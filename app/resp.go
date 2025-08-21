@@ -7,11 +7,20 @@ import (
 	"strconv"
 )
 
+const (
+	STRING   = '+'
+	ERROR    = '-'
+	INTEGERS = ':'
+	BULK     = '$'
+	ARRAY    = '*'
+)
+
 // *2\r\n$5\r\nhello\r\n$5\r\nworld\r\n.
 
 type Value struct {
-	typ   string // array, bulk string
-	str   string
+	typ   string // "array", "bulk", "string", "error", "integer"
+	str   string // used for bulk or simple strings and error
+	num   int    // used for integers
 	array []Value
 }
 
@@ -20,6 +29,8 @@ type RespParser struct {
 }
 
 // why bufio?
+// simply put, we can't directly deal with raw data. We need something that provides tools to play with raw things.
+// however, why not "io" but "bufio". Simply put, more convinient
 
 func NewRespParser(rd io.Reader) *RespParser {
 	return &RespParser{reader: bufio.NewReader(rd)}
@@ -98,4 +109,68 @@ func (p *RespParser) readInteger() (int, error) {
 		return 0, err
 	}
 	return len, nil
+}
+
+func (v Value) Marshal() []byte {
+	switch v.typ {
+	case "array":
+		return v.marshalArray()
+	case "bulk":
+		return v.marshalBulk()
+	case "string":
+		return v.marshalString()
+	case "null":
+		return v.marshalNull()
+	case "error":
+		return v.marshalError()
+	default:
+		return []byte{}
+	}
+}
+
+func (v Value) marshalArray() []byte {
+	// *2\r\n$5\r\nhello\r\n$5\r\nworld\r\n.
+	var bytes []byte
+	len := len(v.array)
+	bytes = append(bytes, ARRAY)
+	bytes = append(bytes, strconv.Itoa(len)...)
+	bytes = append(bytes, '\r', '\n')
+
+	for i := 0; i < len; i++ {
+		bytes = append(bytes, v.array[i].Marshal()...)
+	}
+	return bytes
+}
+
+func (v Value) marshalError() []byte {
+	var bytes []byte
+	bytes = append(bytes, ERROR)
+	bytes = append(bytes, v.str...)
+	bytes = append(bytes, '\r', '\n')
+
+	return bytes
+}
+
+func (v Value) marshalNull() []byte {
+	return []byte("$-1\r\n")
+}
+
+func (v Value) marshalString() []byte {
+	var bytes []byte
+	bytes = append(bytes, STRING)
+	bytes = append(bytes, v.str...)
+	bytes = append(bytes, '\r', '\n')
+
+	return bytes
+}
+
+func (v Value) marshalBulk() []byte {
+	var bytes []byte
+	bytes = append(bytes, BULK)
+	bytes = append(bytes, strconv.Itoa(len(v.str))...)
+	bytes = append(bytes, '\r', '\n')
+	bytes = append(bytes, v.str...)
+	bytes = append(bytes, '\r', '\n')
+
+	return bytes
 }

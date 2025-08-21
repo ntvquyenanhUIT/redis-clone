@@ -37,10 +37,10 @@ func main() {
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
 
-	buf := make([]byte, 1024)
+	parser := NewRespParser(conn)
 
 	for {
-		_, err := conn.Read(buf)
+		value, err := parser.ReadValue()
 
 		if err != nil {
 
@@ -48,15 +48,23 @@ func handleConnection(conn net.Conn) {
 				break
 			}
 
-			fmt.Println("Error reading from connection ", err)
+			fmt.Println("Error reading from client ", err)
 			os.Exit(1)
 		}
 
-		_, err = conn.Write([]byte("+PONG\r\n"))
-		if err != nil {
-			fmt.Println("Error responding to client")
-			break
-		}
+		command := value.array[0].str
+		args := value.array[1:]
 
+		if command == "echo" || command == "ECHO" {
+			if len(args) != 1 {
+				conn.Write([]byte("-ERR wrong number of arguments for 'echo' command\r\n"))
+				continue
+			}
+
+			response := fmt.Sprintf("$%d\r\n%s\r\n", len(args[0].str), args[0].str)
+			conn.Write([]byte(response))
+		} else {
+			conn.Write([]byte("+PONG\r\n"))
+		}
 	}
 }

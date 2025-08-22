@@ -8,11 +8,11 @@ import (
 )
 
 const (
-	STRING   = '+'
-	ERROR    = '-'
-	INTEGERS = ':'
-	BULK     = '$'
-	ARRAY    = '*'
+	STRING  = '+'
+	ERROR   = '-'
+	INTEGER = ':'
+	BULK    = '$'
+	ARRAY   = '*'
 )
 
 // *2\r\n$5\r\nhello\r\n$5\r\nworld\r\n.
@@ -123,6 +123,8 @@ func (v Value) Marshal() []byte {
 		return v.marshalNull()
 	case "error":
 		return v.marshalError()
+	case "int":
+		return v.marshalInt()
 	default:
 		return []byte{}
 	}
@@ -172,5 +174,13 @@ func (v Value) marshalBulk() []byte {
 	bytes = append(bytes, v.str...)
 	bytes = append(bytes, '\r', '\n')
 
+	return bytes
+}
+
+func (v Value) marshalInt() []byte {
+	var bytes []byte
+	bytes = append(bytes, INTEGER)
+	bytes = append(bytes, strconv.Itoa(v.num)...)
+	bytes = append(bytes, '\r', '\n')
 	return bytes
 }

@@ -108,6 +108,21 @@ func handleConnection(conn net.Conn, store *Store) {
 			}
 			writer.Write(Value{typ: "string", str: val})
 
+		case "RPUSH":
+			if len(args) != 2 {
+				errValue := Value{typ: "error", str: "ERR wrong number of arguments for 'get' command"}
+				writer.Write(errValue)
+				continue
+			}
+
+			len, err := store.RPush(args[0].str, args[1].str)
+
+			if err != nil {
+				writer.Write(Value{typ: "null"})
+				continue
+			}
+
+			writer.Write(Value{typ: "int", num: len})
 		default:
 			unknown := Value{typ: "error", str: fmt.Sprintf("ERR unknown command '%s'", command)}
 			writer.Write(unknown)

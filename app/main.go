@@ -6,14 +6,11 @@ import (
 	"net"
 	"os"
 	"strings"
-	"sync"
 )
 
 // Ensures gofmt doesn't remove the "net" and "os" imports in stage 1 (feel free to remove this!)
 var _ = net.Listen
 var _ = os.Exit
-
-var mu = &sync.Mutex{}
 
 func main() {
 
@@ -80,16 +77,24 @@ func handleConnection(conn net.Conn, store *Store) {
 			pong := Value{typ: "string", str: "PONG"}
 			writer.Write(pong)
 		case "SET":
-			if len(args) != 2 {
+
+			argLength := len(args)
+
+			switch argLength {
+			case 2:
+				store.Set(args[0].str, args[1].str)
+				ok := Value{typ: "string", str: "OK"}
+				writer.Write(ok)
+			case 4:
+				store.SetWithTimeOut(args[0].str, args[1].str, args[len(args)-1].str)
+				ok := Value{typ: "string", str: "OK"}
+				writer.Write(ok)
+			default:
 				errValue := Value{typ: "error", str: "ERR wrong number of arguments for 'set' command"}
 				writer.Write(errValue)
 				continue
 			}
 
-			store.Set(args[0].str, args[1].str)
-
-			ok := Value{typ: "string", str: "OK"}
-			writer.Write(ok)
 		case "GET":
 			if len(args) != 1 {
 				errValue := Value{typ: "error", str: "ERR wrong number of arguments for 'get' command"}

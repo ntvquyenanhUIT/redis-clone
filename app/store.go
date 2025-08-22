@@ -62,12 +62,9 @@ func (s *Store) SetWithTimeOut(key, value, expiredTime string) {
 	// First, convert the string to an integer.
 	ms, err := strconv.ParseInt(expiredTime, 10, 64)
 	if err != nil {
-		// For now, we'll ignore the error, but in a real-world scenario,
-		// you'd want to return an error to the client.
 		return
 	}
 
-	// Next, create a time.Duration from the milliseconds.
 	duration := time.Duration(ms) * time.Millisecond
 	ttl := time.Now().Add(duration)
 

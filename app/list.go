@@ -91,14 +91,17 @@ func (l *DoublyLinkedList) LRange(start, end int) []string {
 	if start < 0 {
 		if Abs(start) > l.len {
 			start = 0
+		} else {
+			start = l.len + start
 		}
-		start = l.len + start
 	}
 	if end < 0 {
 		if Abs(start) > l.len {
 			start = 0
+		} else {
+			end = l.len + end
 		}
-		end = l.len + end
+
 	}
 
 	if start > end || start >= l.len {

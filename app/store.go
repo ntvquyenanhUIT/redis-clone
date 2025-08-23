@@ -155,3 +155,24 @@ func (s *Store) LRange(key string, start, end int) ([]string, error) {
 	result := list.LRange(start, end)
 	return result, nil
 }
+
+func (s *Store) LLen(key string) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	obj, exists := s.items[key]
+
+	if !exists {
+		return 0, nil
+	}
+
+	list, ok := obj.value.(*DoublyLinkedList)
+
+	if !ok {
+		return -1, fmt.Errorf("WRONGTYPE Operation against a key holding the wrong kind of value")
+	}
+
+	result := list.Len()
+	return result, nil
+
+}

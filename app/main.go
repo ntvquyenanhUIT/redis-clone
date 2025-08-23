@@ -219,6 +219,22 @@ func handleConnection(conn net.Conn, store *Store) {
 
 			}
 
+		case "LLEN":
+			if len(args) != 1 {
+				errValue := Value{typ: "error", str: "ERR wrong number of arguments for 'get' command"}
+				writer.Write(errValue)
+				continue
+			}
+
+			result, err := store.LLen(args[0].str)
+			if err != nil {
+				errValue := Value{typ: "error", str: err.Error()}
+				writer.Write(errValue)
+				continue
+			}
+
+			writer.Write(Value{typ: "int", num: result})
+
 		default:
 			unknown := Value{typ: "error", str: fmt.Sprintf("ERR unknown command '%s'", command)}
 			writer.Write(unknown)

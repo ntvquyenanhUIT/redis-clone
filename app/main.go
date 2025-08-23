@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -73,9 +74,11 @@ func handleConnection(conn net.Conn, store *Store) {
 				continue
 			}
 			writer.Write(args[0])
+
 		case "PING":
 			pong := Value{typ: "string", str: "PONG"}
 			writer.Write(pong)
+
 		case "SET":
 
 			argLength := len(args)
@@ -96,33 +99,193 @@ func handleConnection(conn net.Conn, store *Store) {
 			}
 
 		case "GET":
+
 			if len(args) != 1 {
 				errValue := Value{typ: "error", str: "ERR wrong number of arguments for 'get' command"}
 				writer.Write(errValue)
 				continue
 			}
+
 			val, ok := store.Get(args[0].str)
 			if !ok {
 				writer.Write(Value{typ: "null"})
 				continue
 			}
+
 			writer.Write(Value{typ: "string", str: val})
 
 		case "RPUSH":
-			if len(args) != 2 {
-				errValue := Value{typ: "error", str: "ERR wrong number of arguments for 'get' command"}
+
+			switch {
+			case len(args) == 2:
+				len, err := store.RPush(args[0].str, args[1].str)
+
+				if err != nil {
+					writer.Write(Value{typ: "null"})
+					continue
+
+				}
+				writer.Write(Value{typ: "int", num: len})
+			case len(args) > 2:
+				listLen := 0
+				for i := 1; i < len(args); i++ {
+					len, err := store.RPush(args[0].str, args[i].str)
+
+					if err != nil {
+						writer.Write(Value{typ: "null"})
+						continue
+					}
+					listLen = len
+				}
+				writer.Write(Value{typ: "int", num: listLen})
+
+			default:
+
+				errValue := Value{typ: "error", str: "ERR wrong number of arguments for 'rpush' command"}
+				writer.Write(errValue)
+				continue
+
+			}
+		case "LPUSH":
+			switch {
+			case len(args) == 2:
+				len, err := store.LPush(args[0].str, args[1].str)
+
+				if err != nil {
+					writer.Write(Value{typ: "null"})
+					continue
+
+				}
+				writer.Write(Value{typ: "int", num: len})
+			case len(args) > 2:
+				listLen := 0
+				for i := 1; i < len(args); i++ {
+					len, err := store.LPush(args[0].str, args[i].str)
+
+					if err != nil {
+						writer.Write(Value{typ: "null"})
+						continue
+					}
+					listLen = len
+				}
+				writer.Write(Value{typ: "int", num: listLen})
+
+			default:
+
+				errValue := Value{typ: "error", str: "ERR wrong number of arguments for 'lpush' command"}
+				writer.Write(errValue)
+				continue
+
+			}
+
+		case "LRANGE":
+			switch {
+			case len(args) == 3:
+				start, err := strconv.Atoi(args[1].str)
+				if err != nil {
+					errValue := Value{typ: "error", str: "ERR Cannot parse range"}
+					writer.Write(errValue)
+					continue
+				}
+				end, err := strconv.Atoi(args[2].str)
+				if err != nil {
+					errValue := Value{typ: "error", str: "ERR Cannot parse range"}
+					writer.Write(errValue)
+					continue
+				}
+
+				result, err := store.LRange(args[0].str, start, end)
+				if err != nil {
+					errValue := Value{typ: "error", str: "ERR error getting list range"}
+					writer.Write(errValue)
+					continue
+				}
+				arr := Value{
+					array: make([]Value, 0),
+				}
+				for _, val := range result {
+					str := Value{
+						typ: "string",
+						str: val,
+					}
+					arr.array = append(arr.array, str)
+				}
+				writer.Write(Value{typ: "array", array: arr.array})
+
+			default:
+				errValue := Value{typ: "error", str: "ERR wrong number of arguments for 'lrange' command"}
+				writer.Write(errValue)
+				continue
+
+			}
+
+		case "LLEN":
+			if len(args) != 1 {
+				errValue := Value{typ: "error", str: "ERR wrong number of arguments for 'llen' command"}
 				writer.Write(errValue)
 				continue
 			}
 
-			len, err := store.RPush(args[0].str, args[1].str)
-
+			result, err := store.LLen(args[0].str)
 			if err != nil {
-				writer.Write(Value{typ: "null"})
+				errValue := Value{typ: "error", str: err.Error()}
+				writer.Write(errValue)
 				continue
 			}
 
-			writer.Write(Value{typ: "int", num: len})
+			writer.Write(Value{typ: "int", num: result})
+
+		case "LPOP":
+
+		LPOP_SWITCH:
+			switch {
+			case len(args) == 1:
+				val, hasDeleted, err := store.LPop(args[0].str)
+				if err != nil {
+					errValue := Value{typ: "error", str: err.Error()}
+					writer.Write(errValue)
+					continue
+				}
+
+				if !hasDeleted {
+					writer.Write(Value{typ: "null"})
+					continue
+				}
+
+				writer.Write(Value{typ: "string", str: val})
+			case len(args) == 2:
+				timeToExecute, err := strconv.Atoi(args[1].str)
+
+				if err != nil {
+					writer.Write(Value{typ: "error", str: fmt.Sprintf("ERR invalid number: %v", args[0].str)})
+					continue
+				}
+
+				arr := make([]Value, 0)
+
+				for range timeToExecute {
+					val, hasDeleted, err := store.LPop(args[0].str)
+
+					if err != nil {
+						errValue := Value{typ: "error", str: err.Error()}
+						writer.Write(errValue)
+						break LPOP_SWITCH
+					}
+
+					if !hasDeleted {
+						writer.Write(Value{typ: "null"})
+						break LPOP_SWITCH
+					}
+					str := Value{typ: "string", str: val}
+					arr = append(arr, str)
+				}
+				writer.Write(Value{typ: "array", array: arr})
+
+			default:
+				errValue := Value{typ: "error", str: "ERR wrong number of arguments for 'LPOP' command"}
+				writer.Write(errValue)
+				continue
+			}
 		default:
 			unknown := Value{typ: "error", str: fmt.Sprintf("ERR unknown command '%s'", command)}
 			writer.Write(unknown)

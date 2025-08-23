@@ -110,3 +110,91 @@ func (s *Store) RPush(key, value string) (int, error) {
 	list.RPush(value)
 	return list.len, nil
 }
+
+func (s *Store) LPush(key, value string) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	obj, exists := s.items[key]
+
+	if !exists {
+		newList := NewDoublyLinkedList()
+		newList.LPush(value)
+
+		s.items[key] = RedisObject{
+			value: newList,
+		}
+		return newList.len, nil
+	}
+
+	list, ok := obj.value.(*DoublyLinkedList)
+	if !ok {
+		// The key exists but holds something else (like a string).
+		// This is a protocol error, just like in real Redis.
+		return 0, fmt.Errorf("WRONGTYPE Operation against a key holding the wrong kind of value")
+	}
+
+	list.LPush(value)
+	return list.len, nil
+}
+
+func (s *Store) LRange(key string, start, end int) ([]string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	obj, exists := s.items[key]
+	if !exists {
+		return []string{}, nil
+	}
+
+	list, ok := obj.value.(*DoublyLinkedList)
+
+	if !ok {
+		return nil, fmt.Errorf("WRONGTYPE Operation against a key holding the wrong kind of value")
+	}
+
+	result := list.LRange(start, end)
+	return result, nil
+}
+
+func (s *Store) LLen(key string) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	obj, exists := s.items[key]
+
+	if !exists {
+		return 0, nil
+	}
+
+	list, ok := obj.value.(*DoublyLinkedList)
+
+	if !ok {
+		return -1, fmt.Errorf("WRONGTYPE Operation against a key holding the wrong kind of value")
+	}
+
+	result := list.Len()
+	return result, nil
+
+}
+
+func (s *Store) LPop(key string) (string, bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	obj, exists := s.items[key]
+
+	if !exists {
+		return "", false, nil
+	}
+
+	list, ok := obj.value.(*DoublyLinkedList)
+
+	if !ok {
+		return "", false, fmt.Errorf("WRONGTYPE Operation against a key holding the wrong kind of value")
+	}
+
+	val, hasDeleted := list.LPop()
+
+	return val, hasDeleted, nil
+
+}

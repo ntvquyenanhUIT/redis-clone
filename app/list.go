@@ -87,6 +87,13 @@ func (l *DoublyLinkedList) RPop() (string, bool) {
 }
 
 func (l *DoublyLinkedList) LRange(start, end int) []string {
+	if start < 0 {
+		start = l.len + start
+	}
+	if end < 0 {
+		end = l.len + end
+	}
+
 	if start > end || start >= l.len {
 		return []string{}
 	}
@@ -103,6 +110,9 @@ func (l *DoublyLinkedList) LRange(start, end int) []string {
 	for current != nil {
 		if currInd >= start && currInd <= end {
 			result = append(result, current.value)
+		}
+		if currInd == end {
+			break
 		}
 		currInd++
 		current = current.next

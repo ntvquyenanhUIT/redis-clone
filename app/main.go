@@ -162,6 +162,7 @@ func handleConnection(conn net.Conn, store *Store) {
 					writer.Write(errValue)
 					continue
 				}
+
 				result, err := store.LRange(args[0].str, start, end)
 				if err != nil {
 					errValue := Value{typ: "error", str: "ERR error getting list range"}
@@ -169,7 +170,6 @@ func handleConnection(conn net.Conn, store *Store) {
 					continue
 				}
 				arr := Value{
-					typ:   "array",
 					array: make([]Value, 0),
 				}
 				for _, val := range result {

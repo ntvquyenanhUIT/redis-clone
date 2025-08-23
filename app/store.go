@@ -110,3 +110,22 @@ func (s *Store) RPush(key, value string) (int, error) {
 	list.RPush(value)
 	return list.len, nil
 }
+
+func (s *Store) LRange(key string, start, end int) ([]string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	obj, exists := s.items[key]
+	if !exists {
+		return []string{}, nil
+	}
+
+	list, ok := obj.value.(*DoublyLinkedList)
+
+	if !ok {
+		return nil, fmt.Errorf("WRONGTYPE Operation against a key holding the wrong kind of value")
+	}
+
+	result := list.LRange(start, end)
+	return result, nil
+}

@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -140,11 +141,50 @@ func handleConnection(conn net.Conn, store *Store) {
 
 			default:
 
-				if len(args) != 2 {
-					errValue := Value{typ: "error", str: "ERR wrong number of arguments for 'get' command"}
+				errValue := Value{typ: "error", str: "ERR wrong number of arguments for 'get' command"}
+				writer.Write(errValue)
+				continue
+
+			}
+
+		case "LRANGE":
+			switch {
+			case len(args) == 3:
+				start, err := strconv.Atoi(args[1].str)
+				if err != nil {
+					errValue := Value{typ: "error", str: "ERR Cannot parse range"}
 					writer.Write(errValue)
 					continue
 				}
+				end, err := strconv.Atoi(args[2].str)
+				if err != nil {
+					errValue := Value{typ: "error", str: "ERR Cannot parse range"}
+					writer.Write(errValue)
+					continue
+				}
+				result, err := store.LRange(args[0].str, start, end)
+				if err != nil {
+					errValue := Value{typ: "error", str: "ERR error getting list range"}
+					writer.Write(errValue)
+					continue
+				}
+				arr := Value{
+					typ:   "array",
+					array: make([]Value, 0),
+				}
+				for _, val := range result {
+					str := Value{
+						typ: "string",
+						str: val,
+					}
+					arr.array = append(arr.array, str)
+				}
+				writer.Write(Value{typ: "array", array: arr.array})
+
+			default:
+				errValue := Value{typ: "error", str: "ERR wrong number of arguments for 'get' command"}
+				writer.Write(errValue)
+				continue
 
 			}
 

@@ -146,6 +146,37 @@ func handleConnection(conn net.Conn, store *Store) {
 				continue
 
 			}
+		case "LPUSH":
+			switch {
+			case len(args) == 2:
+				len, err := store.LPush(args[0].str, args[1].str)
+
+				if err != nil {
+					writer.Write(Value{typ: "null"})
+					continue
+
+				}
+				writer.Write(Value{typ: "int", num: len})
+			case len(args) > 2:
+				listLen := 0
+				for i := 1; i < len(args); i++ {
+					len, err := store.LPush(args[0].str, args[i].str)
+
+					if err != nil {
+						writer.Write(Value{typ: "null"})
+						continue
+					}
+					listLen = len
+				}
+				writer.Write(Value{typ: "int", num: listLen})
+
+			default:
+
+				errValue := Value{typ: "error", str: "ERR wrong number of arguments for 'get' command"}
+				writer.Write(errValue)
+				continue
+
+			}
 
 		case "LRANGE":
 			switch {

@@ -111,6 +111,32 @@ func (s *Store) RPush(key, value string) (int, error) {
 	return list.len, nil
 }
 
+func (s *Store) LPush(key, value string) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	obj, exists := s.items[key]
+
+	if !exists {
+		newList := NewDoublyLinkedList()
+		newList.LPush(value)
+
+		s.items[key] = RedisObject{
+			value: newList,
+		}
+		return newList.len, nil
+	}
+
+	list, ok := obj.value.(*DoublyLinkedList)
+	if !ok {
+		// The key exists but holds something else (like a string).
+		// This is a protocol error, just like in real Redis.
+		return 0, fmt.Errorf("WRONGTYPE Operation against a key holding the wrong kind of value")
+	}
+
+	list.LPush(value)
+	return list.len, nil
+}
+
 func (s *Store) LRange(key string, start, end int) ([]string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

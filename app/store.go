@@ -176,3 +176,25 @@ func (s *Store) LLen(key string) (int, error) {
 	return result, nil
 
 }
+
+func (s *Store) LPop(key string) (string, bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	obj, exists := s.items[key]
+
+	if !exists {
+		return "", false, nil
+	}
+
+	list, ok := obj.value.(*DoublyLinkedList)
+
+	if !ok {
+		return "", false, fmt.Errorf("WRONGTYPE Operation against a key holding the wrong kind of value")
+	}
+
+	val, hasDeleted := list.LPop()
+
+	return val, hasDeleted, nil
+
+}

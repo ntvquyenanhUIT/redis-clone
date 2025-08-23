@@ -235,6 +235,27 @@ func handleConnection(conn net.Conn, store *Store) {
 
 			writer.Write(Value{typ: "int", num: result})
 
+		case "LPOP":
+			if len(args) != 1 {
+				errValue := Value{typ: "error", str: "ERR wrong number of arguments for 'get' command"}
+				writer.Write(errValue)
+				continue
+			}
+
+			val, hasDeleted, err := store.LPop(args[0].str)
+			if err != nil {
+				errValue := Value{typ: "error", str: err.Error()}
+				writer.Write(errValue)
+				continue
+			}
+
+			if !hasDeleted {
+				writer.Write(Value{typ: "null"})
+				continue
+			}
+
+			writer.Write(Value{typ: "string", str: val})
+
 		default:
 			unknown := Value{typ: "error", str: fmt.Sprintf("ERR unknown command '%s'", command)}
 			writer.Write(unknown)

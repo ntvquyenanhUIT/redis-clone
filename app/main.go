@@ -141,7 +141,7 @@ func handleConnection(conn net.Conn, store *Store) {
 
 			default:
 
-				errValue := Value{typ: "error", str: "ERR wrong number of arguments for 'get' command"}
+				errValue := Value{typ: "error", str: "ERR wrong number of arguments for 'rpush' command"}
 				writer.Write(errValue)
 				continue
 
@@ -172,7 +172,7 @@ func handleConnection(conn net.Conn, store *Store) {
 
 			default:
 
-				errValue := Value{typ: "error", str: "ERR wrong number of arguments for 'get' command"}
+				errValue := Value{typ: "error", str: "ERR wrong number of arguments for 'lpush' command"}
 				writer.Write(errValue)
 				continue
 
@@ -213,7 +213,7 @@ func handleConnection(conn net.Conn, store *Store) {
 				writer.Write(Value{typ: "array", array: arr.array})
 
 			default:
-				errValue := Value{typ: "error", str: "ERR wrong number of arguments for 'get' command"}
+				errValue := Value{typ: "error", str: "ERR wrong number of arguments for 'lrange' command"}
 				writer.Write(errValue)
 				continue
 
@@ -221,7 +221,7 @@ func handleConnection(conn net.Conn, store *Store) {
 
 		case "LLEN":
 			if len(args) != 1 {
-				errValue := Value{typ: "error", str: "ERR wrong number of arguments for 'get' command"}
+				errValue := Value{typ: "error", str: "ERR wrong number of arguments for 'llen' command"}
 				writer.Write(errValue)
 				continue
 			}
@@ -236,26 +236,56 @@ func handleConnection(conn net.Conn, store *Store) {
 			writer.Write(Value{typ: "int", num: result})
 
 		case "LPOP":
-			if len(args) != 1 {
-				errValue := Value{typ: "error", str: "ERR wrong number of arguments for 'get' command"}
+
+		LPOP_SWITCH:
+			switch {
+			case len(args) == 1:
+				val, hasDeleted, err := store.LPop(args[0].str)
+				if err != nil {
+					errValue := Value{typ: "error", str: err.Error()}
+					writer.Write(errValue)
+					continue
+				}
+
+				if !hasDeleted {
+					writer.Write(Value{typ: "null"})
+					continue
+				}
+
+				writer.Write(Value{typ: "string", str: val})
+			case len(args) == 2:
+				timeToExecute, err := strconv.Atoi(args[1].str)
+
+				if err != nil {
+					writer.Write(Value{typ: "error", str: fmt.Sprintf("ERR invalid number: %v", args[0].str)})
+					continue
+				}
+
+				arr := make([]Value, 0)
+
+				for range timeToExecute {
+					val, hasDeleted, err := store.LPop(args[0].str)
+
+					if err != nil {
+						errValue := Value{typ: "error", str: err.Error()}
+						writer.Write(errValue)
+						break LPOP_SWITCH
+					}
+
+					if !hasDeleted {
+						writer.Write(Value{typ: "null"})
+						break LPOP_SWITCH
+					}
+					str := Value{typ: "string", str: val}
+					arr = append(arr, str)
+				}
+				writer.Write(Value{typ: "array", array: arr})
+
+			default:
+				errValue := Value{typ: "error", str: "ERR wrong number of arguments for 'LPOP' command"}
 				writer.Write(errValue)
 				continue
 			}
-
-			val, hasDeleted, err := store.LPop(args[0].str)
-			if err != nil {
-				errValue := Value{typ: "error", str: err.Error()}
-				writer.Write(errValue)
-				continue
-			}
-
-			if !hasDeleted {
-				writer.Write(Value{typ: "null"})
-				continue
-			}
-
-			writer.Write(Value{typ: "string", str: val})
-
 		default:
 			unknown := Value{typ: "error", str: fmt.Sprintf("ERR unknown command '%s'", command)}
 			writer.Write(unknown)

@@ -217,7 +217,7 @@ func (s *Store) LPop(key string) (string, bool, error) {
 
 }
 
-func (s *Store) BLPop(key string, timeout int) (string, error) {
+func (s *Store) BLPop(key string, timeout float64) (string, error) {
 
 	// try pop first, if pop successfully, just return as usual
 	// else, create a sepearate channel for it and add to the map
@@ -248,7 +248,8 @@ func (s *Store) BLPop(key string, timeout int) (string, error) {
 
 	var timer <-chan time.Time
 	if timeout > 0 {
-		timer = time.After(time.Duration(timeout) * time.Second)
+		duration := time.Duration(timeout * float64(time.Second))
+		timer = time.After(duration)
 	}
 
 	select {

@@ -285,7 +285,7 @@ func handleConnection(conn net.Conn, store *Store) {
 				continue
 			}
 		case "BLPOP":
-			timeout, err := strconv.Atoi(args[1].str)
+			timeout, err := strconv.ParseFloat(args[1].str, 64)
 
 			if err != nil {
 				writer.Write(Value{

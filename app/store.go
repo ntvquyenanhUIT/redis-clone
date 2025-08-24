@@ -13,14 +13,16 @@ type RedisObject struct {
 }
 
 type Store struct {
-	items map[string]RedisObject
-	mu    *sync.Mutex
+	items         map[string]RedisObject
+	mu            *sync.Mutex
+	waitingClient map[string][]chan string
 }
 
 func NewDataStore() (error, *Store) {
 	return nil, &Store{
-		items: make(map[string]RedisObject),
-		mu:    &sync.Mutex{},
+		items:         make(map[string]RedisObject),
+		mu:            &sync.Mutex{},
+		waitingClient: make(map[string][]chan string),
 	}
 }
 
@@ -84,10 +86,17 @@ func (s *Store) SetWithTimeOut(key, value, expiredTime string) {
 		s.items[key] = newItem
 	}
 }
-
 func (s *Store) RPush(key, value string) (int, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	if len(s.waitingClient[key]) > 0 {
+		s.waitingClient[key][0] <- value
+		close(s.waitingClient[key][0])
+		s.waitingClient[key] = s.waitingClient[key][1:]
+		return 1, nil
+	}
+
 	obj, exists := s.items[key]
 
 	if !exists {
@@ -114,6 +123,15 @@ func (s *Store) RPush(key, value string) (int, error) {
 func (s *Store) LPush(key, value string) (int, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	if len(s.waitingClient[key]) > 0 {
+		s.waitingClient[key][0] <- value
+		close(s.waitingClient[key][0])
+		s.waitingClient[key] = s.waitingClient[key][1:]
+		// The value is consumed by the waiting client, not stored in the list.
+		return 1, nil
+	}
+
 	obj, exists := s.items[key]
 
 	if !exists {
@@ -196,5 +214,59 @@ func (s *Store) LPop(key string) (string, bool, error) {
 	val, hasDeleted := list.LPop()
 
 	return val, hasDeleted, nil
+
+}
+
+func (s *Store) BLPop(key string, timeout int) (string, error) {
+
+	// try pop first, if pop successfully, just return as usual
+	// else, create a sepearate channel for it and add to the map
+	s.mu.Lock()
+
+	obj, exists := s.items[key]
+
+	if exists {
+		list, ok := obj.value.(*DoublyLinkedList)
+
+		if !ok {
+			s.mu.Unlock()
+			return "", fmt.Errorf("WRONGTYPE Operation against a key holding the wrong kind of value")
+		}
+
+		val, hasPopped := list.LPop()
+
+		if hasPopped {
+			s.mu.Unlock()
+			return val, nil
+		}
+	}
+
+	// no list, or no item to pop
+	waiter := make(chan string, 1)
+	s.waitingClient[key] = append(s.waitingClient[key], waiter)
+	s.mu.Unlock()
+
+	var timer <-chan time.Time
+	if timeout > 0 {
+		timer = time.After(time.Duration(timeout) * time.Second)
+	}
+
+	select {
+	case val := <-waiter:
+		return val, nil
+	case <-timer:
+		s.mu.Lock()
+		queue := s.waitingClient[key]
+		newQueue := make([]chan string, 0)
+		for _, ch := range queue {
+			if ch != waiter {
+				newQueue = append(newQueue, ch)
+			}
+		}
+		s.waitingClient[key] = newQueue
+		s.mu.Unlock()
+
+		return "", nil
+	}
 
 }

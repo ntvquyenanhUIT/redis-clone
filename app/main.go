@@ -115,15 +115,13 @@ func handleConnection(conn net.Conn, store *Store) {
 			writer.Write(Value{typ: "string", str: val})
 
 		case "RPUSH":
-
 			switch {
 			case len(args) == 2:
 				len, err := store.RPush(args[0].str, args[1].str)
-
+				fmt.Printf("len: %v, err: %v", len, err)
 				if err != nil {
 					writer.Write(Value{typ: "null"})
 					continue
-
 				}
 				writer.Write(Value{typ: "int", num: len})
 			case len(args) > 2:
@@ -286,6 +284,36 @@ func handleConnection(conn net.Conn, store *Store) {
 				writer.Write(errValue)
 				continue
 			}
+		case "BLPOP":
+			timeout, err := strconv.Atoi(args[1].str)
+
+			if err != nil {
+				writer.Write(Value{
+					typ: "error", str: fmt.Sprintf("ERR converting string: '%s'", args[1].str),
+				})
+				continue
+			}
+			result, err := store.BLPop(args[0].str, timeout)
+			if err != nil {
+				writer.Write(Value{
+					typ: "error", str: fmt.Sprintf("ERR performing BLPop: '%s'", args[1].str),
+				})
+				continue
+			}
+			fmt.Println(result)
+			if result == "" {
+				writer.Write(Value{
+					typ: "null",
+				})
+				continue
+			}
+			writer.Write(Value{
+				typ: "array", array: []Value{
+					{typ: "string", str: args[0].str},
+					{typ: "string", str: result},
+				},
+			})
+
 		default:
 			unknown := Value{typ: "error", str: fmt.Sprintf("ERR unknown command '%s'", command)}
 			writer.Write(unknown)

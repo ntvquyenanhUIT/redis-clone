@@ -33,13 +33,10 @@ The primary goal of this project is to learn about networking, protocol parsing,
 
 *   **TCP Server**: Listens for and accepts concurrent client connections on port `6379`.
 *   **RESP Parser**: A custom parser for the Redis Serialization Protocol (RESP) to decode commands from clients.
-*   **Command Handling**: Supports the following Redis commands:
-    *   `PING`: Responds with "PONG".
-    *   `ECHO`: Echoes back the provided argument.
-    *   `SET`: Sets a key-value pair.
-    *   `GET`: Retrieves the value for a key.
-    *   `SET ... PX <milliseconds>`: Sets a key with an expiry time.
+*   **Core Commands**: Supports `PING`, `ECHO`, `SET`, and `GET`, including key expiration with `PX`.
+*   **List Commands**: Implements a list data structure with support for `LPUSH`, `RPUSH`, `LPOP`, `BLPOP`, `LLEN`, and `LRANGE`.
 *   **In-Memory Store**: A thread-safe, in-memory key-value store with support for Time-To-Live (TTL) on keys.
+
 
 <a name="usage"></a>
 
@@ -85,6 +82,9 @@ OK
 127.0.0.1:6379> GET key
 (nil)
 ```
+
+For a detailed guide on supported list commands, see [list.md](list.md).
+
 
 <a name="project-structure"></a>
 

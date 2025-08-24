@@ -9,7 +9,10 @@ import (
 	"strings"
 )
 
-// Ensures gofmt doesn't remove the "net" and "os" imports in stage 1 (feel free to remove this!)
+// interface{}
+// mutex
+// channel
+
 var _ = net.Listen
 var _ = os.Exit
 

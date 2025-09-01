@@ -12,6 +12,7 @@ This project is an implementation of Redis as part of the <a href="https://codec
 
 -   [Table of contents](#table-of-contents)
 -   [Description](#description)
+-   [Upcoming features](#upcoming-features)
 -   [Features](#features)
 -   [Usage](#usage)
     -   [Requirements](#requirements)
@@ -26,6 +27,14 @@ This project is an implementation of Redis as part of the <a href="https://codec
 This is a custom implementation of the Redis server in Go. It focuses on handling concurrent client connections and parsing the Redis Serialization Protocol (RESP). The server supports basic commands like `PING`, `ECHO`, `SET`, and `GET`, including key expiration.
 
 The primary goal of this project is to learn about networking, protocol parsing, and concurrent programming in Go by building a simplified version of a real-world, high-performance system.
+
+## Upcoming features
+
+*   Sorted sets: `ZADD`, `ZRANGE`, `ZSCORE` — in progress
+*   Additional ZSET ops: `ZREM`, `ZCARD`, `ZRANK` — in progress
+*   Transactions — planned
+*   Persistence (AOF/Snapshots) — planned
+
 
 <a name="features"></a>
 
@@ -83,7 +92,7 @@ OK
 (nil)
 ```
 
-For a detailed guide on supported list commands, see [list.md](list.md).
+For a detailed guide on supported list commands, see [list.md](docs/list.md).
 
 
 <a name="project-structure"></a>

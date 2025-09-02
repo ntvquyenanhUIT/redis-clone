@@ -107,6 +107,18 @@ The project is organized into several files within the `app/` directory:
 *   [`app/writer.go`](app/writer.go): A helper to abstract away writing RESP-formatted data back to the client.
 *   [`your_program.sh`](your_program.sh): A utility script to compile and run the server for local development and testing.
 
+
+## AI Assistance Disclosure
+
+This project uses AI tools like GitHub Copilot to assist with development. I believe in transparency about AI usage while emphasizing that:
+
+- AI tools are used as learning aids and programming assistants
+- Each suggestion is reviewed, understood, and often modified before implementation
+- The project serves as a learning experience where AI helps explain concepts, suggest patterns, and catch potential issues
+- Working with AI has improved my understanding of Redis internals, protocol parsing, and concurrent programming in Go
+
+I view AI as a collaborative mentor that accelerates learning while still requiring me to understand the underlying principles and make final implementation decisions.
+
 <a name="license"></a>
 
 ## License
